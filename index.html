@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dự báo Thời Tiết & Thủy Văn</title>
+    <style>
+        /* CSS Cơ bản dùng chung */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #e0e5ec; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        
+        /* Cấu trúc MẶC ĐỊNH cho Điện thoại (Mobile-first) */
+        .app-container { 
+            background: linear-gradient(135deg, #4a90e2 0%, #50e3c2 100%); 
+            width: 100%; 
+            max-width: 400px; 
+            min-height: 100vh; 
+            padding: 25px 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+        }
+
+        .location-header { text-align: center; color: white; margin-top: 10px; }
+        .location-header h1 { font-size: 26px; font-weight: 600; letter-spacing: 0.5px; }
+        .location-header p { font-size: 14px; opacity: 0.85; margin-top: 5px; }
+
+        .main-weather { text-align: center; color: white; margin: 15px 0; }
+        .temp { font-size: 80px; font-weight: bold; line-height: 1; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); transition: all 0.3s;}
+        .desc { font-size: 22px; margin-top: 10px; font-weight: 500; }
+
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-card { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); padding: 15px; border-radius: 20px; text-align: center; color: white; }
+        .metric-card h3 { font-size: 14px; opacity: 0.9; margin-bottom: 8px; font-weight: 500; }
+        .metric-card p { font-size: 24px; font-weight: bold; }
+
+        .water-level-section { background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .water-level-section h2 { font-size: 18px; margin-bottom: 15px; color: #2c3e50; }
+        .water-info { display: flex; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; }
+        .water-info:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .water-info span.label { color: #7f8c8d; font-size: 15px; }
+        .water-info span.value { color: #0984e3; font-weight: bold; font-size: 16px; }
+
+        .btn-refresh { background-color: white; color: #4a90e2; border: none; padding: 18px; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-top: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-refresh:active { transform: scale(0.96); }
+
+        /* =========================================================
+           THÊM MỚI: Giao diện ngang cho Laptop (Màn hình > 768px) 
+           ========================================================= */
+        @media (min-width: 768px) { 
+            .app-container { 
+                max-width: 850px; /* Phóng to chiều ngang */
+                min-height: auto;
+                border-radius: 30px; 
+                margin: 40px; 
+                padding: 40px;
+                
+                /* Chuyển sang CSS Grid thay vì Flexbox */
+                display: grid;
+                grid-template-columns: 1fr 1.2fr; /* Chia 2 cột: Cột trái (1 phần), Cột phải to hơn (1.2 phần) */
+                grid-template-rows: auto auto auto auto;
+                
+                /* Sắp xếp các thành phần: Cột trái chứa thông tin, cột phải chứa phần "main" */
+                grid-template-areas: 
+                    "header main"
+                    "metrics main"
+                    "water main"
+                    "btn main";
+                gap: 20px 40px; /* Khoảng cách hàng 20px, khoảng cách cột 40px */
+            }
+
+            /* Áp dụng vị trí dựa trên bản đồ grid-template-areas phía trên */
+            .location-header { grid-area: header; text-align: left; margin-top: 0; }
+            .metrics-grid { grid-area: metrics; }
+            .water-level-section { grid-area: water; align-self: start; }
+            .btn-refresh { grid-area: btn; margin-top: 0; padding: 15px; }
+
+            /* Định dạng lại phần Nhiệt độ chính nằm to bên phải */
+            .main-weather { 
+                grid-area: main; 
+                margin: 0;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.15); /* Tạo khung viền mờ làm điểm nhấn */
+                border-radius: 25px;
+                box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            }
+            .temp { font-size: 110px; } /* Phóng to số nhiệt độ trên laptop */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <div class="location-header">
+            <h1 id="city-name">Thủ Đức, TP.HCM</h1>
+            <p id="date-time">Hôm nay, Đang cập nhật...</p>
+        </div>
+
+        <div class="main-weather">
+            <div class="temp" id="temperature">--°C</div>
+            <div class="desc" id="weather-desc">Đang tải dữ liệu...</div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>💧 Độ ẩm</h3>
+                <p id="humidity">--%</p>
+            </div>
+            <div class="metric-card">
+                <h3>🍃 AQI</h3>
+                <p id="aqi">--</p>
+            </div>
+        </div>
+
+        <div class="water-level-section">
+            <h2>🌊 Dữ liệu Thủy văn</h2>
+            <div class="water-info">
+                <span class="label">Mực nước (Sea level)</span>
+                <span class="value" id="water-level">-- m</span>
+            </div>
+            <div class="water-info">
+                <span class="label">Độ cao sóng (Wave)</span>
+                <span class="value" id="wave-height">-- m</span>
+            </div>
+        </div>
+
+        <button class="btn-refresh" id="refresh-btn">📍 Lấy vị trí & Cập nhật dữ liệu</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
