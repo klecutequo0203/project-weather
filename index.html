@@ -45,30 +45,23 @@
         .btn-refresh { background-color: white; color: #4a90e2; border: none; padding: 18px; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-top: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .btn-refresh:active { transform: scale(0.96); }
 
-        /* =========================================================
-           THÊM MỚI: Giao diện ngang cho Laptop (Màn hình > 768px) 
-           ========================================================= */
+
         @media (min-width: 768px) { 
             .app-container { 
-                max-width: 850px; /* Phóng to chiều ngang */
-                min-height: auto;
-                border-radius: 30px; 
-                margin: 40px; 
-                padding: 40px;
-                
-                /* Chuyển sang CSS Grid thay vì Flexbox */
+                /* ... các dòng cũ giữ nguyên ... */
                 display: grid;
-                grid-template-columns: 1fr 1.2fr; /* Chia 2 cột: Cột trái (1 phần), Cột phải to hơn (1.2 phần) */
-                grid-template-rows: auto auto auto auto;
-                
-                /* Sắp xếp các thành phần: Cột trái chứa thông tin, cột phải chứa phần "main" */
+                grid-template-columns: 1fr 1.2fr;
+                /* Định nghĩa lại bản đồ: Thêm details kéo dài 2 cột ở dưới cùng */
                 grid-template-areas: 
                     "header main"
                     "metrics main"
                     "water main"
-                    "btn main";
-                gap: 20px 40px; /* Khoảng cách hàng 20px, khoảng cách cột 40px */
+                    "btn main"
+                    "details details"; 
+                gap: 20px 40px; 
             }
+            /* Đặt class detail-section vào đúng vị trí bản đồ */
+            .detail-section { grid-area: details; margin-top: 10px; }
 
             /* Áp dụng vị trí dựa trên bản đồ grid-template-areas phía trên */
             .location-header { grid-area: header; text-align: left; margin-top: 0; }
@@ -103,8 +96,9 @@
         
         /* Danh sách dọc cho 7 ngày */
         .daily-list { display: flex; flex-direction: column; gap: 10px; }
-        .daily-item { display: flex; justify-content: space-between; padding: 12px; background: #f1f5f9; border-radius: 12px; font-size: 15px; }
-        .daily-item span.temps { font-weight: bold; color: #34495e; }
+        .daily-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f1f5f9; border-radius: 12px; font-size: 16px; }
+        .daily-item span.temps { font-weight: bold; color: #34495e; min-width: 80px; text-align: right; }
+        .daily-item span.icon { font-size: 24px; }
     </style>
 </head>
 

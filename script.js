@@ -55,10 +55,31 @@ function onError(error) {
 }
 
 // 6. HÀM GỌI API BẰNG FETCH (Giải thích với giáo viên đây là Bất đồng bộ - Async/Await)
-// Hàm gọi dữ liệu từ Backend Python
+// Hàm phụ trợ: Chuyển đổi mã thời tiết thành Icon
+function getWeatherIcon(code) {
+    if (code === 0) return "☀️";
+    if (code > 0 && code <= 3) return "⛅";
+    if (code >= 50 && code <= 69) return "🌧️";
+    if (code >= 70 && code <= 79) return "❄️";
+    if (code >= 95) return "⛈️";
+    return "☁️";
+}
+
+// Hàm phụ trợ: Chuyển đổi mã thời tiết thành chữ
+function getWeatherDesc(code) {
+    if (code === 0) return "Trời quang đãng";
+    if (code > 0 && code <= 3) return "Có mây";
+    if (code >= 50 && code <= 69) return "Có mưa";
+    if (code >= 70 && code <= 79) return "Có tuyết";
+    if (code >= 95) return "Có sấm sét";
+    return "Hơi thất thường";
+}
+
+// HÀM CHÍNH ĐỂ LẤY VÀ HIỂN THỊ DỮ LIỆU
 async function fetchWeatherData(lat, lon) {
     try {
-       const response = await fetch(`https://app-d-b-o-th-i-ti-t.onrender.com/api/weather?lat=${lat}&lon=${lon}`);
+        // LƯU Ý: Vẫn giữ nguyên đường link Render của bạn ở đây
+        const response = await fetch(`https://app-d-b-o-th-i-ti-t.onrender.com/api/weather?lat=${lat}&lon=${lon}`);
         const data = await response.json();
 
         if (data.error) {
@@ -67,30 +88,69 @@ async function fetchWeatherData(lat, lon) {
             return;
         }
 
-        // Cập nhật giao diện với toàn bộ dữ liệu thật
-        tempEl.innerText = `${data.temperature}°C`;
-        humidityEl.innerText = `${data.humidity}%`;
-        aqiEl.innerText = data.aqi; // Hiển thị chỉ số AQI lấy bằng API Key của bạn
+        // 1. CẬP NHẬT MÀN HÌNH CHÍNH (Xóa sổ lỗi undefined)
+        const current = data.current;
+        tempEl.innerText = `${current.temperature}°C`;
+        humidityEl.innerText = `${current.humidity}%`;
+        aqiEl.innerText = current.aqi;
+        descEl.innerText = getWeatherDesc(current.weather_code);
         
-        // Cập nhật thông tin biển
-        if (data.wave_height !== "Không có dữ liệu biển") {
-            waveHeightEl.innerText = `${data.wave_height} m`;
+        if (current.wave_height !== "Không có dữ liệu biển") {
+            waveHeightEl.innerText = `${current.wave_height} m`;
         } else {
             waveHeightEl.innerText = "Không có dữ liệu biển";
         }
 
-        // Diễn giải mã thời tiết
-        const code = data.weather_code;
-        if (code === 0) descEl.innerText = "☀️ Trời quang đãng";
-        else if (code > 0 && code <= 3) descEl.innerText = "⛅ Có mây";
-        else if (code >= 50 && code <= 69) descEl.innerText = "🌧️ Có mưa";
-        else descEl.innerText = "Hơi thất thường";
+        // 2. VẼ BIỂU ĐỒ 24 GIỜ TỚI
+        const hourlyEl = document.getElementById('hourly-forecast');
+        hourlyEl.innerHTML = ''; // Xóa chữ "Đang tải..."
+        
+        for(let i = 0; i < 24; i++) {
+            // Lấy giờ (ví dụ: 14h)
+            const timeDate = new Date(data.hourly.time[i]);
+            const timeStr = timeDate.getHours() + "h";
+            const temp = Math.round(data.hourly.temperature[i]);
+            const icon = getWeatherIcon(data.hourly.weather_code[i]);
+
+            hourlyEl.innerHTML += `
+                <div class="hourly-item">
+                    <p style="color: #7f8c8d;">${timeStr}</p>
+                    <p style="font-size: 24px; margin: 8px 0;">${icon}</p>
+                    <p style="font-weight: bold; color: #2c3e50;">${temp}°C</p>
+                </div>
+            `;
+        }
+
+        // 3. VẼ DANH SÁCH DỰ BÁO 7 NGÀY
+        const dailyEl = document.getElementById('daily-forecast');
+        dailyEl.innerHTML = ''; // Xóa chữ "Đang tải..."
+
+        for(let i = 0; i < 7; i++) {
+            const dateObj = new Date(data.daily.time[i]);
+            // Format ngày thành dạng "Thứ Bảy, 14/3"
+            const dayStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
+            
+            const icon = getWeatherIcon(data.daily.weather_code[i]);
+            const tempMax = Math.round(data.daily.temp_max[i]);
+            const tempMin = Math.round(data.daily.temp_min[i]);
+            
+            // Ngày đầu tiên hiển thị chữ "Hôm nay" cho thân thiện
+            const displayDay = (i === 0) ? "Hôm nay" : dayStr;
+
+            dailyEl.innerHTML += `
+                <div class="daily-item">
+                    <span style="min-width: 90px; color: #7f8c8d;">${displayDay}</span>
+                    <span class="icon">${icon}</span>
+                    <span class="temps">${tempMin}°C / ${tempMax}°C</span>
+                </div>
+            `;
+        }
 
         resetButton();
 
     } catch (error) {
         console.error("Lỗi khi kết nối Backend:", error);
-        alert("Không thể kết nối với máy chủ Python. Hãy chắc chắn bạn đã gõ lệnh 'python app.py' trong Terminal.");
+        alert("Không thể kết nối với máy chủ Render.");
         resetButton();
     }
 }
