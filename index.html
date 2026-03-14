@@ -90,6 +90,21 @@
             }
             .temp { font-size: 110px; } /* Phóng to số nhiệt độ trên laptop */
         }
+        /* Style cho phần Chi tiết mới thêm */
+        .detail-section { background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .detail-section h2 { font-size: 16px; margin-bottom: 15px; color: #2c3e50; }
+        
+        /* Trượt ngang cho 24h */
+        .hourly-scroll { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; }
+        .hourly-scroll::-webkit-scrollbar { height: 6px; }
+        .hourly-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .hourly-item { min-width: 60px; text-align: center; background: #f1f5f9; padding: 10px; border-radius: 12px; }
+        .hourly-item p { margin: 5px 0; font-size: 14px; font-weight: bold;}
+        
+        /* Danh sách dọc cho 7 ngày */
+        .daily-list { display: flex; flex-direction: column; gap: 10px; }
+        .daily-item { display: flex; justify-content: space-between; padding: 12px; background: #f1f5f9; border-radius: 12px; font-size: 15px; }
+        .daily-item span.temps { font-weight: bold; color: #34495e; }
     </style>
 </head>
 
@@ -128,6 +143,17 @@
             </div>
         </div>
 
+        <div class="detail-section">
+            <h2>⏱️ Dự báo 24 giờ tới</h2>
+            <div class="hourly-scroll" id="hourly-forecast">
+                <div class="hourly-item">Đang tải...</div>
+            </div>
+
+            <h2 style="margin-top: 20px;">📅 Dự báo 7 ngày</h2>
+            <div class="daily-list" id="daily-forecast">
+                <div class="daily-item">Đang tải...</div>
+            </div>
+        </div>
         <button class="btn-refresh" id="refresh-btn">📍 Lấy vị trí & Cập nhật dữ liệu</button>
     </div>
     <script src="script.js"></script>
