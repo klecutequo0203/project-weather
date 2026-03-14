@@ -2,15 +2,14 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
+import traceback # Thư viện để truy tìm dấu vết lỗi
 from dotenv import load_dotenv
 
-# Tải file .env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Lấy API key của hệ thống Chất lượng không khí từ file .env
 WAQI_KEY = os.getenv('WAQI_API_KEY')
 
 @app.route('/api/weather', methods=['GET'])
@@ -22,28 +21,35 @@ def get_weather_data():
         return jsonify({"error": "Thiếu thông tin tọa độ"}), 400
 
     try:
-        # 1. API THỜI TIẾT (Sử dụng cấu trúc link bạn vừa tìm được trên Open-Meteo)
-        # Đã thay số 52.52 thành {lat} và 13.40 thành {lon}
+        # 1. API THỜI TIẾT
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto"
-        weather_res = requests.get(weather_url).json()
+        weather_response = requests.get(weather_url)
+        weather_res = weather_response.json()
 
-        # 2. API HẢI VĂN (Độ cao sóng)
+        # BẮT BỆNH: Nếu Open-Meteo trả về lỗi thay vì thời tiết, báo thẳng ra màn hình
+        if "error" in weather_res or weather_response.status_code != 200:
+            return jsonify({"error": f"Open-Meteo từ chối: {weather_res.get('reason', 'Không rõ')}"}), 500
+
+        # 2. API HẢI VĂN
         marine_url = f"https://marine-api.open-meteo.com/v1/marine?latitude={lat}&longitude={lon}&current=wave_height"
         marine_res = requests.get(marine_url).json()
         
-        wave_height = marine_res.get('current', {}).get('wave_height')
-        if wave_height is None:
-            wave_height = "Không có dữ liệu biển"
+        # BẮT BỆNH: Xử lý an toàn khi tọa độ ở trên đất liền không có biển
+        wave_height = "Không có dữ liệu biển"
+        if "current" in marine_res and "wave_height" in marine_res["current"]:
+            wave_height = marine_res["current"]["wave_height"]
+            if wave_height is None:
+                wave_height = "Không có dữ liệu biển"
 
-        # 3. API CHẤT LƯỢNG KHÔNG KHÍ (WAQI)
-        waqi_url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={WAQI_KEY}"
-        waqi_res = requests.get(waqi_url).json()
-
+        # 3. API AQI
         aqi_value = "Đang cập nhật"
-        if waqi_res.get('status') == 'ok':
-            aqi_value = waqi_res['data']['aqi']
+        if WAQI_KEY:
+            waqi_url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={WAQI_KEY}"
+            waqi_res = requests.get(waqi_url).json()
+            if waqi_res.get('status') == 'ok':
+                aqi_value = waqi_res['data']['aqi']
 
-        # 4. ĐÓNG GÓI JSON GỬI VỀ CHO TRÌNH DUYỆT
+        # 4. GÓI DỮ LIỆU
         final_data = {
             "current": {
                 "temperature": weather_res['current']['temperature_2m'],
@@ -68,8 +74,10 @@ def get_weather_data():
         return jsonify(final_data)
 
     except Exception as e:
-        print("Lỗi Backend:", e)
-        return jsonify({"error": "Không thể lấy dữ liệu từ các máy chủ ngoài"}), 500
+        # BẮT BỆNH: Nếu code Python sập, in ra chính xác dòng lỗi là gì
+        error_detail = traceback.format_exc()
+        print(error_detail) # In ra Terminal để lập trình viên xem
+        return jsonify({"error": f"Mã lỗi Python: {repr(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
