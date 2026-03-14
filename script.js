@@ -76,41 +76,73 @@ function getWeatherDesc(code) {
 }
 
 // HÀM CHÍNH ĐỂ LẤY VÀ HIỂN THỊ DỮ LIỆU
+// Hàm phụ trợ: Chuyển đổi mã thời tiết thành Icon
+function getWeatherIcon(code) {
+    if (code === 0) return "☀️";
+    if (code > 0 && code <= 3) return "⛅";
+    if (code >= 50 && code <= 69) return "🌧️";
+    if (code >= 70 && code <= 79) return "❄️";
+    if (code >= 95) return "⛈️";
+    return "☁️";
+}
+
+// Hàm phụ trợ: Chuyển đổi mã thời tiết thành chữ
+function getWeatherDesc(code) {
+    if (code === 0) return "Trời quang đãng";
+    if (code > 0 && code <= 3) return "Có mây";
+    if (code >= 50 && code <= 69) return "Có mưa";
+    if (code >= 70 && code <= 79) return "Có tuyết";
+    if (code >= 95) return "Có sấm sét";
+    return "Hơi thất thường";
+}
+
 async function fetchWeatherData(lat, lon) {
     try {
-        // LƯU Ý: Vẫn giữ nguyên đường link Render của bạn ở đây
-        const response = await fetch(`https://app-d-b-o-th-i-ti-t.onrender.com/api/weather?lat=${lat}&lon=${lon}`);
-        const data = await response.json();
+        // 1. GỌI TRỰC TIẾP OPEN-METEO TỪ TRÌNH DUYỆT CỦA BẠN (Tránh lỗi IP của Render)
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+        const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=wave_height`;
+        
+        // Gọi 2 API cùng lúc cho nhanh
+        const [weatherRes, marineRes] = await Promise.all([
+            fetch(weatherUrl),
+            fetch(marineUrl)
+        ]);
+        
+        const weatherData = await weatherRes.json();
+        const marineData = await marineRes.json();
 
-        if (data.error) {
-            alert("Lỗi từ máy chủ: " + data.error);
-            resetButton();
-            return;
-        }
+        // 2. GỌI RENDER CHỈ ĐỂ LẤY AQI (Vì cần giấu API Key WAQI)
+        // !!! NHỚ SỬA LẠI ĐƯỜNG LINK RENDER CỦA BẠN VÀO ĐÂY VÀ ĐỔI ĐUÔI THÀNH /api/aqi !!!
+        const aqiRes = await fetch(`https://app-d-b-o-th-i-ti-t.onrender.com/api/aqi?lat=${lat}&lon=${lon}`);
+        const aqiData = await aqiRes.json();
 
-        // 1. CẬP NHẬT MÀN HÌNH CHÍNH (Xóa sổ lỗi undefined)
-        const current = data.current;
-        tempEl.innerText = `${current.temperature}°C`;
-        humidityEl.innerText = `${current.humidity}%`;
-        aqiEl.innerText = current.aqi;
+
+        // 3. ĐỔ DỮ LIỆU LÊN MÀN HÌNH CHÍNH
+        const current = weatherData.current;
+        tempEl.innerText = `${Math.round(current.temperature_2m)}°C`;
+        humidityEl.innerText = `${current.relative_humidity_2m}%`;
         descEl.innerText = getWeatherDesc(current.weather_code);
         
-        if (current.wave_height !== "Không có dữ liệu biển") {
-            waveHeightEl.innerText = `${current.wave_height} m`;
+        // Hiện AQI từ Render
+        aqiEl.innerText = aqiData.aqi || "--";
+
+        // Hiện dữ liệu sóng
+        const waveHeight = marineData.current?.wave_height;
+        if (waveHeight !== undefined && waveHeight !== null) {
+            waveHeightEl.innerText = `${waveHeight} m`;
         } else {
             waveHeightEl.innerText = "Không có dữ liệu biển";
         }
 
-        // 2. VẼ BIỂU ĐỒ 24 GIỜ TỚI
+        // 4. VẼ BIỂU ĐỒ 24 GIỜ TỚI
         const hourlyEl = document.getElementById('hourly-forecast');
-        hourlyEl.innerHTML = ''; // Xóa chữ "Đang tải..."
+        hourlyEl.innerHTML = ''; 
         
         for(let i = 0; i < 24; i++) {
-            // Lấy giờ (ví dụ: 14h)
-            const timeDate = new Date(data.hourly.time[i]);
+            const timeDate = new Date(weatherData.hourly.time[i]);
             const timeStr = timeDate.getHours() + "h";
-            const temp = Math.round(data.hourly.temperature[i]);
-            const icon = getWeatherIcon(data.hourly.weather_code[i]);
+            const temp = Math.round(weatherData.hourly.temperature_2m[i]);
+            const icon = getWeatherIcon(weatherData.hourly.weather_code[i]);
 
             hourlyEl.innerHTML += `
                 <div class="hourly-item">
@@ -121,20 +153,16 @@ async function fetchWeatherData(lat, lon) {
             `;
         }
 
-        // 3. VẼ DANH SÁCH DỰ BÁO 7 NGÀY
+        // 5. VẼ DANH SÁCH 7 NGÀY
         const dailyEl = document.getElementById('daily-forecast');
-        dailyEl.innerHTML = ''; // Xóa chữ "Đang tải..."
+        dailyEl.innerHTML = ''; 
 
         for(let i = 0; i < 7; i++) {
-            const dateObj = new Date(data.daily.time[i]);
-            // Format ngày thành dạng "Thứ Bảy, 14/3"
+            const dateObj = new Date(weatherData.daily.time[i]);
             const dayStr = dateObj.toLocaleDateString('vi-VN', { weekday: 'short', day: 'numeric', month: 'numeric' });
-            
-            const icon = getWeatherIcon(data.daily.weather_code[i]);
-            const tempMax = Math.round(data.daily.temp_max[i]);
-            const tempMin = Math.round(data.daily.temp_min[i]);
-            
-            // Ngày đầu tiên hiển thị chữ "Hôm nay" cho thân thiện
+            const icon = getWeatherIcon(weatherData.daily.weather_code[i]);
+            const tempMax = Math.round(weatherData.daily.temperature_2m_max[i]);
+            const tempMin = Math.round(weatherData.daily.temperature_2m_min[i]);
             const displayDay = (i === 0) ? "Hôm nay" : dayStr;
 
             dailyEl.innerHTML += `
@@ -149,8 +177,8 @@ async function fetchWeatherData(lat, lon) {
         resetButton();
 
     } catch (error) {
-        console.error("Lỗi khi kết nối Backend:", error);
-        alert("Không thể kết nối với máy chủ Render.");
+        console.error("Lỗi:", error);
+        alert("Có lỗi xảy ra khi tải dữ liệu thời tiết.");
         resetButton();
     }
 }

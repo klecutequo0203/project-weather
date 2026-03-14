@@ -2,82 +2,34 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import os
-import traceback # Thư viện để truy tìm dấu vết lỗi
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 CORS(app)
 
 WAQI_KEY = os.getenv('WAQI_API_KEY')
 
-@app.route('/api/weather', methods=['GET'])
-def get_weather_data():
+# Đổi tên đường dẫn thành /api/aqi cho chuẩn xác
+@app.route('/api/aqi', methods=['GET'])
+def get_aqi():
     lat = request.args.get('lat')
     lon = request.args.get('lon')
 
     if not lat or not lon:
-        return jsonify({"error": "Thiếu thông tin tọa độ"}), 400
+        return jsonify({"error": "Thiếu tọa độ"}), 400
 
+    aqi_value = "Đang cập nhật"
     try:
-        # 1. API THỜI TIẾT
-        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto"
-        weather_response = requests.get(weather_url)
-        weather_res = weather_response.json()
-
-        # BẮT BỆNH: Nếu Open-Meteo trả về lỗi thay vì thời tiết, báo thẳng ra màn hình
-        if "error" in weather_res or weather_response.status_code != 200:
-            return jsonify({"error": f"Open-Meteo từ chối: {weather_res.get('reason', 'Không rõ')}"}), 500
-
-        # 2. API HẢI VĂN
-        marine_url = f"https://marine-api.open-meteo.com/v1/marine?latitude={lat}&longitude={lon}&current=wave_height"
-        marine_res = requests.get(marine_url).json()
-        
-        # BẮT BỆNH: Xử lý an toàn khi tọa độ ở trên đất liền không có biển
-        wave_height = "Không có dữ liệu biển"
-        if "current" in marine_res and "wave_height" in marine_res["current"]:
-            wave_height = marine_res["current"]["wave_height"]
-            if wave_height is None:
-                wave_height = "Không có dữ liệu biển"
-
-        # 3. API AQI
-        aqi_value = "Đang cập nhật"
         if WAQI_KEY:
             waqi_url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={WAQI_KEY}"
-            waqi_res = requests.get(waqi_url).json()
-            if waqi_res.get('status') == 'ok':
-                aqi_value = waqi_res['data']['aqi']
-
-        # 4. GÓI DỮ LIỆU
-        final_data = {
-            "current": {
-                "temperature": weather_res['current']['temperature_2m'],
-                "humidity": weather_res['current']['relative_humidity_2m'],
-                "weather_code": weather_res['current']['weather_code'],
-                "wave_height": wave_height,
-                "aqi": aqi_value
-            },
-            "hourly": {
-                "time": weather_res['hourly']['time'][:24],
-                "temperature": weather_res['hourly']['temperature_2m'][:24],
-                "weather_code": weather_res['hourly']['weather_code'][:24]
-            },
-            "daily": {
-                "time": weather_res['daily']['time'],
-                "temp_max": weather_res['daily']['temperature_2m_max'],
-                "temp_min": weather_res['daily']['temperature_2m_min'],
-                "weather_code": weather_res['daily']['weather_code']
-            }
-        }
-
-        return jsonify(final_data)
-
+            res = requests.get(waqi_url).json()
+            if res.get('status') == 'ok':
+                aqi_value = res['data']['aqi']
     except Exception as e:
-        # BẮT BỆNH: Nếu code Python sập, in ra chính xác dòng lỗi là gì
-        error_detail = traceback.format_exc()
-        print(error_detail) # In ra Terminal để lập trình viên xem
-        return jsonify({"error": f"Mã lỗi Python: {repr(e)}"}), 500
+        print("Lỗi lấy AQI:", e)
+
+    return jsonify({"aqi": aqi_value})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
