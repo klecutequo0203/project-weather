@@ -58,7 +58,7 @@ function onError(error) {
 // Hàm gọi dữ liệu từ Backend Python
 async function fetchWeatherData(lat, lon) {
     try {
-       const response = await fetch(`http://127.0.0.1:5000/api/weather?lat=${lat}&lon=${lon}`);
+       const response = await fetch(`https://app-d-b-o-th-i-ti-t.onrender.com/api/weather?lat=${lat}&lon=${lon}`);
         const data = await response.json();
 
         if (data.error) {
