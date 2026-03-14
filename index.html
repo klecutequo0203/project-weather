@@ -9,7 +9,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #e0e5ec; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
         
-        /* Cấu trúc MẶC ĐỊNH cho Điện thoại (Mobile-first) */
+        /* ================= MẶC ĐỊNH CHO ĐIỆN THOẠI ================= */
         .app-container { 
             background: linear-gradient(135deg, #4a90e2 0%, #50e3c2 100%); 
             width: 100%; 
@@ -42,16 +42,39 @@
         .water-info span.label { color: #7f8c8d; font-size: 15px; }
         .water-info span.value { color: #0984e3; font-weight: bold; font-size: 16px; }
 
-        .btn-refresh { background-color: white; color: #4a90e2; border: none; padding: 18px; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; margin-top: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-refresh { background-color: white; color: #4a90e2; border: none; padding: 18px; border-radius: 15px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .btn-refresh:active { transform: scale(0.96); }
 
+        /* Style cho phần Chi tiết mới thêm */
+        .detail-section { background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .detail-section h2 { font-size: 16px; margin-bottom: 15px; color: #2c3e50; }
+        
+        .hourly-scroll { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; }
+        .hourly-scroll::-webkit-scrollbar { height: 6px; }
+        .hourly-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .hourly-item { min-width: 60px; text-align: center; background: #f1f5f9; padding: 10px; border-radius: 12px; }
+        .hourly-item p { margin: 5px 0; font-size: 14px; font-weight: bold;}
+        
+        .daily-list { display: flex; flex-direction: column; gap: 10px; }
+        .daily-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f1f5f9; border-radius: 12px; font-size: 16px; }
+        .daily-item span.temps { font-weight: bold; color: #34495e; min-width: 80px; text-align: right; }
+        .daily-item span.icon { font-size: 24px; }
 
+
+        /* ================= GIAO DIỆN NGANG CHO LAPTOP ================= */
         @media (min-width: 768px) { 
             .app-container { 
-                /* ... các dòng cũ giữ nguyên ... */
+                max-width: 900px; /* Phóng to khung app lên 900px */
+                min-height: auto;
+                border-radius: 30px; 
+                margin: 40px auto; 
+                padding: 40px;
+                
+                /* Bật chế độ Grid */
                 display: grid;
-                grid-template-columns: 1fr 1.2fr;
-                /* Định nghĩa lại bản đồ: Thêm details kéo dài 2 cột ở dưới cùng */
+                grid-template-columns: 1fr 1.2fr; 
+                
+                /* Bản đồ vị trí: Chú ý dòng details details ở cuối */
                 grid-template-areas: 
                     "header main"
                     "metrics main"
@@ -60,16 +83,15 @@
                     "details details"; 
                 gap: 20px 40px; 
             }
-            /* Đặt class detail-section vào đúng vị trí bản đồ */
-            .detail-section { grid-area: details; margin-top: 10px; }
 
-            /* Áp dụng vị trí dựa trên bản đồ grid-template-areas phía trên */
+            /* Gắn các thẻ HTML vào đúng vị trí trên bản đồ */
             .location-header { grid-area: header; text-align: left; margin-top: 0; }
             .metrics-grid { grid-area: metrics; }
             .water-level-section { grid-area: water; align-self: start; }
             .btn-refresh { grid-area: btn; margin-top: 0; padding: 15px; }
+            .detail-section { grid-area: details; margin-top: 10px; } /* Khung chi tiết nằm dưới cùng */
 
-            /* Định dạng lại phần Nhiệt độ chính nằm to bên phải */
+            /* Định dạng phần Nhiệt độ to bên phải */
             .main-weather { 
                 grid-area: main; 
                 margin: 0;
@@ -77,36 +99,20 @@
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                background: rgba(255, 255, 255, 0.15); /* Tạo khung viền mờ làm điểm nhấn */
+                background: rgba(255, 255, 255, 0.15); 
                 border-radius: 25px;
                 box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
             }
-            .temp { font-size: 110px; } /* Phóng to số nhiệt độ trên laptop */
+            .temp { font-size: 110px; } 
         }
-        /* Style cho phần Chi tiết mới thêm */
-        .detail-section { background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .detail-section h2 { font-size: 16px; margin-bottom: 15px; color: #2c3e50; }
-        
-        /* Trượt ngang cho 24h */
-        .hourly-scroll { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; }
-        .hourly-scroll::-webkit-scrollbar { height: 6px; }
-        .hourly-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .hourly-item { min-width: 60px; text-align: center; background: #f1f5f9; padding: 10px; border-radius: 12px; }
-        .hourly-item p { margin: 5px 0; font-size: 14px; font-weight: bold;}
-        
-        /* Danh sách dọc cho 7 ngày */
-        .daily-list { display: flex; flex-direction: column; gap: 10px; }
-        .daily-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #f1f5f9; border-radius: 12px; font-size: 16px; }
-        .daily-item span.temps { font-weight: bold; color: #34495e; min-width: 80px; text-align: right; }
-        .daily-item span.icon { font-size: 24px; }
     </style>
 </head>
 
 <body>
     <div class="app-container">
         <div class="location-header">
-            <h1 id="city-name">Thủ Đức, TP.HCM</h1>
-            <p id="date-time">Hôm nay, Đang cập nhật...</p>
+            <h1 id="city-name">Đang định vị...</h1>
+            <p id="date-time">Đang cập nhật...</p>
         </div>
 
         <div class="main-weather">
@@ -137,6 +143,8 @@
             </div>
         </div>
 
+        <button class="btn-refresh" id="refresh-btn">📍 Lấy vị trí & Cập nhật dữ liệu</button>
+
         <div class="detail-section">
             <h2>⏱️ Dự báo 24 giờ tới</h2>
             <div class="hourly-scroll" id="hourly-forecast">
@@ -148,8 +156,8 @@
                 <div class="daily-item">Đang tải...</div>
             </div>
         </div>
-        <button class="btn-refresh" id="refresh-btn">📍 Lấy vị trí & Cập nhật dữ liệu</button>
     </div>
+    
     <script src="script.js"></script>
 </body>
 </html>
